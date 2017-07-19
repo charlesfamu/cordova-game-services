@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin
+  id="cordova-plugin-game-services"
+  version="1.0.0"
+  xmlns="http://apache.org/cordova/ns/plugins/1.0"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+
+  <name>GameServices</name>
+
+  <engines>
+    <engine name="cordova" version=">=3.5.0"/>
+  </engines>
+
+  <js-module name="GameServices" src="www/GameServices.js">
+    <clobbers target="cordova.plugins.gameservices" />
+  </js-module>
+
+  <platform name="android">
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="GameServices">
+        <param name="android-package" value="com.littlemathgenius.cordova.plugins.gameservices.GameServices" />
+        <param name="onload" value="true" />
+      </feature>
+    </config-file>
+
+    <config-file target="res/values/strings.xml" parent="/resources">
+      <string name="app_id">$APP_ID</string>
+    </config-file>
+
+    <config-file target="AndroidManifest.xml" parent="/manifest/application">
+      <meta-data
+        android:name="com.google.android.gms.games.APP_ID"
+        android:value="@string/app_id" />
+      <meta-data
+        android:name="com.google.android.gms.version"
+        android:value="@integer/google_play_services_version" />
+    </config-file>
+
+    <source-file src="src/android/BaseGameUtils.java" target-dir="src/com/littlemathgenius/cordova/plugins/gameservices"/>
+    <source-file src="src/android/GameHelper.java" target-dir="src/com/littlemathgenius/cordova/plugins/gameservices"/>
+    <source-file src="src/android/GameHelperUtils.java" target-dir="src/com/littlemathgenius/cordova/plugins/gameservices"/>
+    <source-file src="src/android/GameServices.java" target-dir="src/com/littlemathgenius/cordova/plugins/gameservices" />
+  </platform>
+
+  <platform name="ios">
+    <config-file parent="/*" target="config.xml">
+      <feature name="GameServices">
+        <param name="ios-package" value="GameServices" />
+      </feature>
+    </config-file>
+    <source-file src="src/ios/GameServices.m" />
+  </platform>
+</plugin>
