@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.example.games.basegameutils;
+package com.littlemathgenius.cordova.plugins.gameservices;
 
 import java.util.ArrayList;
 
@@ -951,7 +951,7 @@ public class GameHelper implements GoogleApiClient.ConnectionCallbacks,
             default:
                 // No meaningful Activity response code, so generate default Google
                 // Play services dialog
-                errorDialog = GoogleApiAvailability.getErrorDialog(activity, errorCode, RC_UNUSED);
+                errorDialog = GoogleApiAvailability.getInstance().getErrorDialog(activity, errorCode, RC_UNUSED);
                 if (errorDialog == null) {
                     // get fallback dialog
                     Log.e("GameHelper",

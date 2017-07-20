@@ -31,13 +31,11 @@ import com.google.android.gms.games.Player;
 import com.google.android.gms.games.Games;
 import com.google.android.gms.games.Games.GamesOptions;
 import com.google.android.gms.games.GamesActivityResultCodes;
-import com.google.example.games.basegameutils.GameHelper;
 
 /**
  * This class echoes a string called from JavaScript.
  */
-public class GameServices extends CordovaPlugin implements
-        GameHelper.GameHelperListener {
+public class GameServices extends CordovaPlugin implements GameHelper.GameHelperListener {
 
     public static final String TAG = "GameServicesPlugin";
     public static final int CLIENT_GAMES = GameHelper.CLIENT_GAMES;
@@ -100,11 +98,11 @@ public class GameServices extends CordovaPlugin implements
 	    int res = googleAPI.isGooglePlayServicesAvailable(mActivity);
 
       if (res != ConnectionResult.SUCCESS) {
-        Log.e(LOG_TAG, "Google Play Services are unavailable");
+        Log.e(TAG, "Google Play Services are unavailable");
         callbackContext.error("Unavailable");
         return true;
 	    } else {
-        Log.d(LOG_TAG, "** Google Play Services are available **");
+        Log.d(TAG, "** Google Play Services are available **");
       }
 
       if (ACTION_TOGGLE_DEBUG.equals(action)) {
@@ -161,7 +159,7 @@ public class GameServices extends CordovaPlugin implements
     protected void toggleDebugLog() {
       mDebugLog = !mDebugLog;
       if (gameHelper != null) {
-          mHelper.enableDebugLog(mDebugLog);
+          gameHelper.enableDebugLog(mDebugLog);
       }
     }
 }

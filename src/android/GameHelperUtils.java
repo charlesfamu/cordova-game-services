@@ -1,4 +1,4 @@
-package com.google.example.games.basegameutils;
+package com.littlemathgenius.cordova.plugins.gameservices;
 
 import android.app.Activity;
 import android.content.Context;
