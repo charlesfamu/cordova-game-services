@@ -1,7 +1,7 @@
 function GameServices() {}
 
-GameServices.prototype.coolMethod = function(options, success, error) {
-    cordova.exec(success, error, "GameServices", "coolMethod", [options]);
+GameServices.prototype.login = function(options, success, error) {
+    cordova.exec(success, error, "GameServices", "login", [options]);
 };
 
 GameServices.install = function () {
