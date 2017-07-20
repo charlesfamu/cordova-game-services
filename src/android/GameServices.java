@@ -41,6 +41,7 @@ public class GameServices extends CordovaPlugin implements
     private static final String ACTION_LOGIN = "login";
     private static final String ACTION_LOGOUT = "logout";
     private static final String ACTION_IS_SIGNEDIN = "isSignedIn";
+    private static final String ACTION_TOGGLE_DEBUG = "toggleDebugLog";
 
     private static final String ACTION_SUBMIT_SCORE = "submitScore";
     private static final String ACTION_SUBMIT_SCORE_NOW = "submitScoreNow";
@@ -57,47 +58,42 @@ public class GameServices extends CordovaPlugin implements
 
     private GameHelper gameHelper;
     private int mRequestedClients = CLIENT_GAMES;
-
+    private boolean mDebugLog = false;
     Activity mActivity = null;
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
       super.initialize(cordova, webView);
 
-      Activity mActivity = cordova.getActivity();
-
+      mActivity = cordova.getActivity();
       if (gameHelper == null) {
         gameHelper = new GameHelper(mActivity, CLIENT_GAMES);
-        gameHelper.enableDebugLog(true);
+        gameHelper.enableDebugLog(mDebugLog);
       }
 
       gameHelper.setup(this);
       cordova.setActivityResultCallback(this);
     }
 
-    @Override
-    public void onStart() {
-      super.onStart();
-      gameHelper.onStart(this);
-    }
-
-    @Override
-  	public void onStop(){
-  		super.onStop();
-  		gameHelper.onStop();
+	  @Override
+  	public void onActivityResult(int request, int response, Intent intent) {
+  		super.onActivityResult(request, response, intent);
+  		gameHelper.onActivityResult(request, response, intent);
   	}
 
-	  @Override
-  	public void onActivityResult(int request, int response, Intent data) {
-  		super.onActivityResult(request, response, data);
-  		gameHelper.onActivityResult(request, response, data);
+    @Override
+    public void onStop(){
+  		super.onStop();
+  		signout();
   	}
 
     @Override
     public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
+
       GoogleApiAvailability googleAPI = GoogleApiAvailability.getInstance();
 	    int res = googleAPI.isGooglePlayServicesAvailable(mActivity);
-	    if(res != ConnectionResult.SUCCESS) {
+
+      if (res != ConnectionResult.SUCCESS) {
         Log.e(LOG_TAG, "Google Play Services are unavailable");
         callbackContext.error("Unavailable");
         return true;
@@ -105,17 +101,21 @@ public class GameServices extends CordovaPlugin implements
         Log.d(LOG_TAG, "** Google Play Services are available **");
       }
 
-      if (ACTION_LOGIN.equals(action)) {
+      if (ACTION_TOGGLE_DEBUG.equals(action)) {
+        toggleDebugLog();
+      } else if (ACTION_LOGIN.equals(action)) {
         cordova.getActivity().runOnUiThread(new Runnable() {
           @Override
           public void run() {
-            if (gameHelper.isSignedIn()) {
-              onSignInSucceeded();
-            } else {
+            if (!gameHelper.isSignedIn()) {
               signIn();
             }
           }
         });
+      } else if (ACTION_LOGOUT.equals(action)) {
+        signOut();
+      } else if (ACTION_IS_SIGNEDIN.equals(action)) {
+        
       }
     }
 
@@ -125,5 +125,12 @@ public class GameServices extends CordovaPlugin implements
 
     private void signOut() {
       gameHelper.onStop();
+    }
+
+    protected void toggleDebugLog() {
+      mDebugLog = !mDebugLog;
+      if (gameHelper != null) {
+          mHelper.enableDebugLog(mDebugLog);
+      }
     }
 }
