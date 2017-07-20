@@ -29,9 +29,16 @@ class GameHelperUtils {
             "*License check failed."
     };
 
+    // private final static int[] RES_IDS = {
+    //         R.string.gamehelper_unknown_error, R.string.gamehelper_sign_in_failed,
+    //         R.string.gamehelper_app_misconfigured, R.string.gamehelper_license_failed
+    // };
+    // Replace the actual values of thes string to prevent stupid "Package R does not exist error"
     private final static int[] RES_IDS = {
-            R.string.gamehelper_unknown_error, R.string.gamehelper_sign_in_failed,
-            R.string.gamehelper_app_misconfigured, R.string.gamehelper_license_failed
+            "Unknown error.",
+            "Failed to sign in. Please check your network connection and try again.",
+            "The application is incorrectly configured. Check that the package name and signing certificate match the client ID created in Developer Console. Also, if the application is not yet published, check that the account you are trying to sign in with is listed as a tester account. See logs for more information.",
+            "Failed to sign in. Please check your network connection and try again."
     };
 
     static String activityResponseCodeToString(int respCode) {

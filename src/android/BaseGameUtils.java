@@ -1,4 +1,4 @@
-package com.littlemathgenius.cordova.plugins.gameservices;
+package com.google.example.games.basegameutils;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -120,22 +120,26 @@ public class BaseGameUtils {
 
         switch (actResp) {
             case GamesActivityResultCodes.RESULT_APP_MISCONFIGURED:
-                errorDialog = makeSimpleDialog(activity,
-                        activity.getString(R.string.app_misconfigured));
+                // errorDialog = makeSimpleDialog(activity,
+                //         activity.getString(R.string.app_misconfigured));
+                errorDialog = makeSimpleDialog(activity, "The application is incorrectly configured. Check that the package name and signing certificate match the client ID created in Developer Console. Also, if the application is not yet published, check that the account you are trying to sign in with is listed as a tester account. See logs for more information.");
                 break;
             case GamesActivityResultCodes.RESULT_SIGN_IN_FAILED:
-                errorDialog = makeSimpleDialog(activity,
-                        activity.getString(R.string.sign_in_failed));
+                // errorDialog = makeSimpleDialog(activity,
+                //         activity.getString(R.string.sign_in_failed));
+                errorDialog = makeSimpleDialog(activity, "Failed to sign in. Please check your network connection and try again.");
                 break;
             case GamesActivityResultCodes.RESULT_LICENSE_FAILED:
-                errorDialog = makeSimpleDialog(activity,
-                        activity.getString(R.string.license_failed));
+                // errorDialog = makeSimpleDialog(activity,
+                //         activity.getString(R.string.license_failed));
+                errorDialog = makeSimpleDialog(activity, "License check failed.");
                 break;
             default:
                 // No meaningful Activity response code, so generate default Google
                 // Play services dialog
-                final int errorCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(activity);
-                errorDialog = GoogleApiAvailability.getInstance().getErrorDialog(activity, errorCode, RC_UNUSED);
+                GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
+                final int errorCode = googleApiAvailability.isGooglePlayServicesAvailable(activity);
+                errorDialog = GoogleApiAvailability.getInstance().getErrorDialog(activity, errorCode, requestCode);
                 if (errorDialog == null) {
                     // get fallback dialog
                     Log.e("BaseGamesUtils",
