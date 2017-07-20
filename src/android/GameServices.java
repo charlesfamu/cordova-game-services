@@ -2,6 +2,11 @@ package com.littlemathgenius.cordova.plugins.gameservices;
 
 import java.util.ArrayList;
 
+import org.apache.cordova.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -26,6 +31,7 @@ import com.google.android.gms.games.Player;
 import com.google.android.gms.games.Games;
 import com.google.android.gms.games.Games.GamesOptions;
 import com.google.android.gms.games.GamesActivityResultCodes;
+import com.google.example.games.basegameutils.GameHelper;
 
 /**
  * This class echoes a string called from JavaScript.
@@ -115,8 +121,33 @@ public class GameServices extends CordovaPlugin implements
       } else if (ACTION_LOGOUT.equals(action)) {
         signOut();
       } else if (ACTION_IS_SIGNEDIN.equals(action)) {
-        
+
+      } else if (ACTION_SUBMIT_SCORE.equals(action)) {
+
+      } else if (ACTION_SUBMIT_SCORE_NOW.equals(action)) {
+
+      } else if (ACTION_GET_PLAYER_SCORE.equals(action)) {
+
+      } else if (ACTION_SHOW_ALL_LEADERBOARDS.equals(action)) {
+
+      } else if (ACTION_UNLOCK_ACHIEVEMENT.equals(action)) {
+
+      } else if (ACTION_UNLOCK_ACHIEVEMENT_NOW.equals(action)) {
+
+      } else if (ACTION_INCREMENT_ACHIEVEMENT.equals(action)) {
+
+      } else if (ACTION_INCREMENT_ACHIEVEMENT_NOW.equals(action)) {
+
+      } else if (ACTION_SHOW_ACHIEVEMENTS.equals(action)) {
+
+      } else if (ACTION_SHOW_PLAYER.equals(action)) {
+
+      } else {
+          Log.i(TAG, "This action doesn't exist");
+          return false;
       }
+
+      return true;
     }
 
     private void signIn() {

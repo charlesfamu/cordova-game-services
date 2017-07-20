@@ -1,4 +1,4 @@
-package com.littlemathgenius.cordova.plugins.gameservices;
+package com.google.example.games.basegameutils;
 
 import android.app.Activity;
 import android.app.AlertDialog;
