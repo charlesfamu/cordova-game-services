@@ -61,6 +61,7 @@ public class GameServices extends CordovaPlugin implements GameHelper.GameHelper
     private static final String ACTION_SHOW_PLAYER = "showPlayer";
 
     private GameHelper gameHelper;
+    private CallbackContext authCallbackContext = null;
     private int mRequestedClients = CLIENT_GAMES;
     private boolean mDebugLog = false;
     Activity mActivity = null;
@@ -88,7 +89,7 @@ public class GameServices extends CordovaPlugin implements GameHelper.GameHelper
     @Override
     public void onStop(){
   		super.onStop();
-  		signout();
+  		gameHelper.onStop();
   	}
 
     @Override
@@ -146,6 +147,20 @@ public class GameServices extends CordovaPlugin implements GameHelper.GameHelper
       }
 
       return true;
+    }
+
+    @Override
+    public void onSignInFailed() {
+      if (authCallbackContext != null) {
+        authCallbackContext.error("SIGN IN FAILED");
+      }
+    }
+
+    @Override
+    public void onSignInSucceeded() {
+      if (authCallbackContext != null) {
+        authCallbackContext.success("SIGN IN SUCCESS");
+      }
     }
 
     private void signIn() {

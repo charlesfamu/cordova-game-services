@@ -7,7 +7,8 @@ import android.content.IntentSender;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GooglePlayServicesUtil;
+// import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.games.GamesActivityResultCodes;
 
@@ -53,8 +54,8 @@ public class BaseGameUtils {
         } else {
             // not resolvable... so show an error message
             int errorCode = result.getErrorCode();
-            Dialog dialog = GooglePlayServicesUtil.getErrorDialog(errorCode,
-                    activity, requestCode);
+
+            Dialog dialog = GoogleApiAvailability.getInstance().getErrorDialog(activity, errorCode, requestCode);
             if (dialog != null) {
                 dialog.show();
             } else {
@@ -134,8 +135,7 @@ public class BaseGameUtils {
                 // No meaningful Activity response code, so generate default Google
                 // Play services dialog
                 final int errorCode = GooglePlayServicesUtil.isGooglePlayServicesAvailable(activity);
-                errorDialog = GooglePlayServicesUtil.getErrorDialog(errorCode,
-                        activity, requestCode, null);
+                errorDialog = GoogleApiAvailability.getInstance().getErrorDialog(activity, errorCode, RC_UNUSED);
                 if (errorDialog == null) {
                     // get fallback dialog
                     Log.e("BaseGamesUtils",
