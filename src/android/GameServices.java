@@ -43,9 +43,6 @@ public class GameServices extends CordovaPlugin implements
 
     public static final String TAG = "GameServicesPlugin";
     public static final int RC_GAMESERVICES = 04195819;
-    public static final int CLIENT_GAMES = GameHelper.CLIENT_GAMES;
-    public static final int CLIENT_PLUS = GameHelper.CLIENT_PLUS;
-    public static final int CLIENT_ALL = GameHelper.CLIENT_ALL;
 
     private static final String ACTION_LOGIN = "login";
     private static final String ACTION_LOGOUT = "logout";
