@@ -42,7 +42,7 @@ public class GameServices extends CordovaPlugin implements
   GoogleApiClient.OnConnectionFailedListener {
 
     public static final String TAG = "GameServicesPlugin";
-    public static final int RC_GAMESERVICES = 04195819;
+    public static final int RC_GAMESERVICES = 4195819;
 
     private static final String ACTION_LOGIN = "login";
     private static final String ACTION_LOGOUT = "logout";
