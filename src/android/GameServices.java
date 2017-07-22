@@ -1,28 +1,22 @@
 package com.littlemathgenius.cordova.plugins.gameservices;
 
-import java.util.ArrayList;
-
-import org.apache.cordova.*;
-import org.json.JSONArray;
-import org.json.JSONObject;
-import org.json.JSONException;
-
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.IntentSender.SendIntentException;
-import android.content.SharedPreferences;
-import android.os.Bundle;
-import android.os.Handler;
-import android.net.Uri;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import android.util.Log;
 
+import com.google.android.gms.auth.api.Auth;
+import com.google.android.gms.auth.api.signin.GoogleSignInResult;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.common.api.*;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.common.api.Scope;
 import com.google.android.gms.games.achievement.Achievements;
 import com.google.android.gms.games.leaderboard.Leaderboards;
 import com.google.android.gms.games.GamesStatusCodes;
@@ -31,13 +25,24 @@ import com.google.android.gms.games.Player;
 import com.google.android.gms.games.Games;
 import com.google.android.gms.games.Games.GamesOptions;
 import com.google.android.gms.games.GamesActivityResultCodes;
+import com.google.example.games.basegameutils.BaseGameUtils;
+
+import java.security.MessageDigest;
+
+import org.apache.cordova.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
 
 /**
  * This class echoes a string called from JavaScript.
  */
-public class GameServices extends CordovaPlugin implements GameHelper.GameHelperListener {
+public class GameServices extends CordovaPlugin implements
+  GoogleApiClient.ConnectionCallbacks,
+  GoogleApiClient.OnConnectionFailedListener {
 
     public static final String TAG = "GameServicesPlugin";
+    public static final int RC_GAMESERVICES = 04195819;
     public static final int CLIENT_GAMES = GameHelper.CLIENT_GAMES;
     public static final int CLIENT_PLUS = GameHelper.CLIENT_PLUS;
     public static final int CLIENT_ALL = GameHelper.CLIENT_ALL;
@@ -60,63 +65,45 @@ public class GameServices extends CordovaPlugin implements GameHelper.GameHelper
     private static final String ACTION_SHOW_ACHIEVEMENTS = "showAchievements";
     private static final String ACTION_SHOW_PLAYER = "showPlayer";
 
-    private GameHelper gameHelper;
-    private CallbackContext authCallbackContext = null;
-    private int mRequestedClients = CLIENT_GAMES;
-    private boolean mDebugLog = false;
+    public static final String ARGUMENT_SCOPES = "scopes";
+    public static final String ARGUMENT_OFFLINE_KEY = "offline";
+
+    private GoogleApiClient mGoogleApiClient = null;
+    private CallbackContext savedCallbackContext = null;
     Activity mActivity = null;
 
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
       super.initialize(cordova, webView);
 
-      mActivity = cordova.getActivity();
-      if (gameHelper == null) {
-        gameHelper = new GameHelper(mActivity, CLIENT_GAMES);
-        gameHelper.enableDebugLog(mDebugLog);
-      }
-
-      gameHelper.setup(this);
-      cordova.setActivityResultCallback(this);
     }
 
 	  @Override
   	public void onActivityResult(int request, int response, Intent intent) {
   		super.onActivityResult(request, response, intent);
-  		gameHelper.onActivityResult(request, response, intent);
   	}
 
     @Override
     public void onStop(){
   		super.onStop();
-  		gameHelper.onStop();
   	}
 
     @Override
     public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
+      this.savedCallbackContext = callbackContext;
 
-      GoogleApiAvailability googleAPI = GoogleApiAvailability.getInstance();
-	    int res = googleAPI.isGooglePlayServicesAvailable(mActivity);
-
-      if (res != ConnectionResult.SUCCESS) {
-        Log.e(TAG, "Google Play Services are unavailable");
-        callbackContext.error("Unavailable");
-        return true;
-	    } else {
-        Log.d(TAG, "** Google Play Services are available **");
-      }
-
-      if (ACTION_TOGGLE_DEBUG.equals(action)) {
-        toggleDebugLog();
-      } else if (ACTION_LOGIN.equals(action)) {
-        cordova.getActivity().runOnUiThread(new Runnable() {
-          @Override
-          public void run() {
-            if (!gameHelper.isSignedIn()) {
+      if (ACTION_LOGIN.equals(action)) {
+        if (this.isGooglePlayServicesAvailable()) {
+          cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+              if (this.mGoogleApiClient == null) {
+                buildGoogleApliClient();
+              }
               signIn();
             }
-          }
-        });
+          });
+        }
       } else if (ACTION_LOGOUT.equals(action)) {
         signOut();
       } else if (ACTION_IS_SIGNEDIN.equals(action)) {
@@ -164,17 +151,47 @@ public class GameServices extends CordovaPlugin implements GameHelper.GameHelper
     }
 
     private void signIn() {
-      gameHelper.onStart(mActivity);
+      if (!this.mGoogleApiClient.isConnected()) {
+        Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(this.mGoogleApiClient);
+        cordova.getActivity().startActivityForResult(signInIntent, RC_GAMESERVICES);
+      }
+      return;
     }
 
     private void signOut() {
-      gameHelper.onStop();
     }
 
-    protected void toggleDebugLog() {
-      mDebugLog = !mDebugLog;
-      if (gameHelper != null) {
-          gameHelper.enableDebugLog(mDebugLog);
+    private synchronized void buildGoogleApliClient() throws JSONException {
+      GoogleSignInOptions.Builder gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN);
+      gso.requestEmail().requestProfile();
+
+      Log.i(TAG, "Building GoogleApiClient");
+      GoogleApiClient.Builder builder = new GoogleApiClient.Builder(webView.getContext())
+        .addConnectionCallbacks(this)
+        .addOnConnectionFailedListener(this)
+        .addApi(Auth.GOOGLE_SIGN_IN_API, gso.build())
+        .addApi(Games.API).addScope(Games.SCOPE_GAMES)
+
+      this.mGoogleApiClient = builder.build();
+
+      Log.i(TAG, "GoogleApiClient built");
+    }
+
+    private boolean isGooglePlayServicesAvailable() {
+      GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
+	    int status = googleApiAvailability.isGooglePlayServicesAvailable(this.mActivity);
+
+      if (status != ConnectionResult.SUCCESS) {
+        if (googleApiAvailability.isUserResolvableError(status)) {
+          googleApiAvailability.getErrorDialog(this.mActivity, status, 2404).show();
+        }
+        Log.e(TAG, "Google Play Services are unavailable");
+        this.savedCallbackContext.error("Google Play Services are unavailable");
+        return false;
+	    } else {
+        Log.d(TAG, "** Google Play Services are available **");
+        return true;
       }
+
     }
 }
