@@ -13,6 +13,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInResult;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.AccountPicker;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
@@ -61,6 +62,8 @@ public class GameServices extends CordovaPlugin implements
     private static final String ACTION_SHOW_PLAYER = "showPlayer";
     private static final int RC_SIGN_IN = 9001;
     private static final int RC_GAMESERVICES = 4195819;
+    private boolean mResolvingConnectionFailure = false;
+    private boolean mAutoStartSignInflow = true;
 
     private GoogleApiClient mGoogleApiClient;
     private CallbackContext savedCallbackContext;
@@ -73,8 +76,20 @@ public class GameServices extends CordovaPlugin implements
     }
 
     @Override
-  	public void onActivityResult(int request, int response, Intent intent) {
-  		super.onActivityResult(request, response, intent);
+  	public void onActivityResult(int requestCode, int responseCode, Intent intent) {
+  		super.onActivityResult(requestCode, responseCode, intent);
+      Log.i(TAG, "In onActivityResult");
+
+      // Result returned from launching the Intent from GoogleSignInApi.getSignInIntent(...)
+      if (requestCode == RC_SIGN_IN) {
+        Log.i(TAG, "One of our activities finished up");
+        mResolvingConnectionFailure = false;
+        if (responseCode == RESULT_OK) {
+          handleSignInResult(Auth.GoogleSignInApi.getSignInResultFromIntent(intent));
+        } else {
+          BaseGameUtils.showActivityResultError(this, requestCode, resultCode, R.string.sign_in_failed);
+        }
+      }
   	}
 
     @Override
@@ -101,8 +116,8 @@ public class GameServices extends CordovaPlugin implements
 
     @Override
     public void onConnectionFailed(ConnectionResult result) {
-        Log.i(TAG, "Unresolvable failure in connecting to Google APIs");
-        this.savedCallbackContext.error(result.getErrorCode());
+      Log.i(TAG, "Unresolvable failure in connecting to Google APIs");
+      this.savedCallbackContext.error(result.getErrorCode());
     }
 
     @Override
@@ -116,7 +131,7 @@ public class GameServices extends CordovaPlugin implements
 
       if (ACTION_LOGIN.equals(action)) {
         if (this.isGooglePlayServicesAvailable()) {
-          cordova.getActivity().runOnUiThread(new Runnable() {
+          this.cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
               if (mGoogleApiClient == null) {
@@ -158,27 +173,114 @@ public class GameServices extends CordovaPlugin implements
       return true;
     }
 
-    private void signIn() {
-      if (!this.mGoogleApiClient.isConnected()) {
-        Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(this.mGoogleApiClient);
-        cordova.getActivity().startActivityForResult(signInIntent, RC_SIGN_IN);
+    private void handleSignInResult(GoogleSignInResult signInResult) {
+      if (this.mGoogleApiClient == null) {
+        this.savedCallbackContext.error("GoogleApiClient was never initialized.");
+        return;
       }
-      return;
+
+      if (signInResult == null) {
+        this.savedCallbackContext.error("GoogleSignInResult is null.");
+        return;
+      }
+
+      Log.i(TAG, "Handling SignIn Result");
+
+      if (signInResult.isSuccess()) {
+        this.mGoogleApiClient.connect();
+        GoogleSignInAccount acct = signInResult.getSignInAccount();
+        JSONObject result = new JSONObject();
+
+        try {
+          Log.i(TAG, "trying to get account information");
+
+          result.put("email", acct.getEmail());
+
+          //only gets included if requested (See Line 164).
+          result.put("idToken", acct.getIdToken());
+
+          //only gets included if requested (See Line 166).
+          result.put("serverAuthCode", acct.getServerAuthCode());
+
+          result.put("userId", acct.getId());
+          result.put("displayName", acct.getDisplayName());
+          result.put("familyName", acct.getFamilyName());
+          result.put("givenName", acct.getGivenName());
+          result.put("imageUrl", acct.getPhotoUrl());
+
+          this.savedCallbackContext.success(result);
+        } catch (JSONException e) {
+          this.savedCallbackContext.error("Trouble parsing result, error: " + e.getMessage());
+        }
+      } else {
+        Log.i(TAG, "Wasn't signed in.");
+        this.savedCallbackContext.error(signInResult.getStatus().getStatusCode());
+      }
+    }
+
+    private void signIn() {
+      Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(this.mGoogleApiClient);
+      cordova.getActivity().startActivityForResult(signInIntent, RC_SIGN_IN);
     }
 
     private void signOut() {
+      if (this.mGoogleApiClient == null) {
+        this.savedCallbackContext.error("Please use login before logging out.")
+        return;
+      }
+
+      ConnectionResult apiConnect = this.mGoogleApiClient.blockingConnect();
+
+      if (apiConnect.isSuccess()) {
+        Auth.GoogleSignInApi.signOut(this.mGoogleApiClient).setResultCallback(
+          new ResultCallback<Status>() {
+            @Override
+            public void onResult(Status status) {
+              if (status.isSuccess()) {
+                savedCallbackContext.success("Logged user out.");
+              } else {
+                savedCallbackContext.error(status.getStatusCode());
+              }
+            }
+          }
+        )
+      }
+    }
+
+    private void revokeAccess() {
+      if (this.mGoogleApiClient == null) {
+        this.savedCallbackContext.error("Please use login before disconnecting");
+        return;
+      }
+
+      ConnectionResult apiConnect = mGoogleApiClient.blockingConnect();
+
+      if (apiConnect.isSuccess()) {
+        Auth.GoogleSignInApi.revokeAccess(this.mGoogleApiClient).setResultCallback(
+          new ResultCallback<Status>() {
+            @Override
+            public void onResult(Status status) {
+              if (status.isSuccess()) {
+                savedCallbackContext.success("Revoked user access.");
+              } else {
+                savedCallbackContext.error(status.getStatusCode());
+              }
+            }
+          }
+        )
+      }
     }
 
     private void buildGoogleApliClient() {
       GoogleSignInOptions.Builder gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_GAMES_SIGN_IN);
-      gso.requestEmail().requestProfile();
 
       Log.i(TAG, "Building GoogleApiClient");
       GoogleApiClient.Builder builder = new GoogleApiClient.Builder(webView.getContext())
         .addConnectionCallbacks(this)
         .addOnConnectionFailedListener(this)
-        .addApi(Games.API)
-        .addApi(Auth.GOOGLE_SIGN_IN_API, gso.build());
+        .setViewForPopups(webView)
+        .addApi(Auth.GOOGLE_SIGN_IN_API, gso.build())
+        .addApi(Games.API);
 
       this.mGoogleApiClient = builder.build();
 
