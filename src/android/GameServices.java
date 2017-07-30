@@ -45,8 +45,8 @@ public class GameServices extends CordovaPlugin implements
 
     public static final String TAG = "GameServicesPlugin";
 
-    private static final String ACTION_LOGIN = "login";
-    private static final String ACTION_LOGOUT = "logout";
+    private static final String ACTION_SIGNIN = "signIn";
+    private static final String ACTION_SIGNOUT = "signOut";
     private static final String ACTION_IS_SIGNEDIN = "isSignedIn";
 
     private static final String ACTION_SUBMIT_SCORE = "submitScore";
@@ -67,6 +67,7 @@ public class GameServices extends CordovaPlugin implements
     private boolean mResolvingConnectionFailure = false;
     private boolean mAutoStartSignInflow = true;
     private boolean mConnecting = false;
+    private boolean mExplicitSignout = false;
     // SignInFailureReason mSignInFailureReason = null;
 
     private GoogleApiClient mGoogleApiClient;
@@ -78,49 +79,16 @@ public class GameServices extends CordovaPlugin implements
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
       super.initialize(cordova, webView);
       mActivity = cordova.getActivity();
-      buildGoogleApliClient();
-    }
-
-    @Override
-    public void onConnected(Bundle connectionHint) {
-      Log.i(TAG, "onConected: connected!");
-      succeedSignIn();
-    }
-
-    private void succeedSignIn() {
-      Log.i(TAG, "succeedSignIn: signedIn");
-      // mSignInFailureReason = null;
-      mConnecting = false;
-    }
-
-    @Override
-    public void onConnectionSuspended(int cause) {
-      mGoogleApiClient.connect();
-    }
-
-    @Override
-    public void onConnectionFailed(ConnectionResult result) {
-      Log.i(TAG, "Unresolvable failure in connecting to Google APIs");
-      // this.savedCallbackContext.error(result.getErrorCode());
-      if (mResolvingConnectionFailure) {
-        return;
-      }
-
-      mResolvingConnectionFailure = true;
-
-      if (!BaseGameUtils.resolveConnectionFailure(mActivity, mGoogleApiClient, result, RC_SIGN_IN, errorMessageCode)) {
-        mResolvingConnectionFailure = false;
-      }
+      cordova.setActivityResultCallback(this);
     }
 
     @Override
     public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
       savedCallbackContext = callbackContext;
 
-      if (ACTION_LOGIN.equals(action)) {
-        cordova.setActivityResultCallback(this);
+      if (ACTION_SIGNIN.equals(action)) {
         if (isGooglePlayServicesAvailable()) {
-          this.cordova.getActivity().runOnUiThread(new Runnable() {
+          mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
               if (mGoogleApiClient == null) {
@@ -129,11 +97,39 @@ public class GameServices extends CordovaPlugin implements
               signIn();
             }
           });
+        } else {
+          callbackContext.error("Google Play Services are unavailable.");
         }
-      } else if (ACTION_LOGOUT.equals(action)) {
-        signOut();
-      } else if (ACTION_IS_SIGNEDIN.equals(action)) {
 
+      } else if (ACTION_SIGNOUT.equals(action)) {
+        if (isGooglePlayServicesAvailable()) {
+          Games.signOut(mGoogleApiClient).setResultCallback(
+            new ResultCallback<Status>() {
+              @Override
+              public void onResult(Status status) {
+                if (status.isSuccess()) {
+                  mGoogleApiClient.disconnect();
+                  signOut();
+                } else {
+                  savedCallbackContext.error(status.getStatusCode());
+                }
+              }
+            }
+          );
+        } else {
+          callbackContext.error("Google Play Services are unavailable.");
+        }
+      } else if (ACTION_IS_SIGNEDIN.equals(action)) {
+        if (isGooglePlayServicesAvailable()) {
+          mActivity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+              isSignedIn();
+            }
+          });
+        } else {
+          callbackContext.error("Google Play Services are unavailable.");
+        }
       } else if (ACTION_SUBMIT_SCORE.equals(action)) {
 
       } else if (ACTION_SUBMIT_SCORE_NOW.equals(action)) {
@@ -160,6 +156,52 @@ public class GameServices extends CordovaPlugin implements
       }
 
       return true;
+    }
+
+    @Override
+    public void onConnected(Bundle connectionHint) {
+      Log.i(TAG, "onConected: connected!");
+      succeedSignIn();
+    }
+
+    private void succeedSignIn() {
+      Log.i(TAG, "succeedSignIn: signedIn");
+      // mSignInFailureReason = null;
+      mConnecting = false;
+    }
+
+    private void isSignedIn() {
+      Log.i(TAG, "isSignedIn: execution");
+      boolean response = mGoogleApiClient != null && mGoogleApiClient.isConnected();
+
+      try {
+        JSONObject result = new JSONObject();
+        result.put("isSignedIn", response);
+        savedCallbackContext.success(result);
+      } catch (JSONException e) {
+        Log.i(TAG, "isSignedIn: unable to determine if user is signed in or not", e);
+        savedCallbackContext.error("isSignedIn: unable to determine if user is signed in or not");
+      }
+    }
+
+    @Override
+    public void onConnectionSuspended(int cause) {
+      mGoogleApiClient.connect();
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult result) {
+      Log.i(TAG, "Unresolvable failure in connecting to Google APIs");
+      // this.savedCallbackContext.error(result.getErrorCode());
+      if (mResolvingConnectionFailure) {
+        return;
+      }
+
+      mResolvingConnectionFailure = true;
+
+      if (!BaseGameUtils.resolveConnectionFailure(mActivity, mGoogleApiClient, result, RC_SIGN_IN, errorMessageCode)) {
+        mResolvingConnectionFailure = false;
+      }
     }
 
     private void signIn() {
@@ -239,8 +281,15 @@ public class GameServices extends CordovaPlugin implements
       Log.i(TAG, "Handling SignIn Result");
 
       if (signInResult.isSuccess()) {
-        savedCallbackContext.success();
         connect();
+        try {
+          JSONObject result = new JSONObject();
+          result.put("isSignedIn", true);
+          savedCallbackContext.success(result);
+        } catch (JSONException e) {
+          Log.i(TAG, "handleSignInResult: unable to create json object properly, signIn was successful", e);
+          savedCallbackContext.success();
+        }
       } else {
         Log.i(TAG, "Wasn't signed in.");
         savedCallbackContext.error(signInResult.getStatus().getStatusCode());
@@ -271,7 +320,14 @@ public class GameServices extends CordovaPlugin implements
             @Override
             public void onResult(Status status) {
               if (status.isSuccess()) {
-                savedCallbackContext.success("Logged user out.");
+                try {
+                  JSONObject result = new JSONObject();
+                  result.put("isSignedIn", false);
+                  savedCallbackContext.success(result);
+                } catch (JSONException e) {
+                  Log.i(TAG, "signOut: unable to create json object properly, signout was successful", e);
+                  savedCallbackContext.success();
+                }
               } else {
                 savedCallbackContext.error(status.getStatusCode());
               }
@@ -330,7 +386,6 @@ public class GameServices extends CordovaPlugin implements
           googleApiAvailability.getErrorDialog(mActivity, status, 2404).show();
         }
         Log.e(TAG, "Google Play Services are unavailable");
-        savedCallbackContext.error("Google Play Services are unavailable");
         return false;
 	    } else {
         Log.d(TAG, "** Google Play Services are available **");
