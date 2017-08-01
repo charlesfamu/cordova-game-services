@@ -88,12 +88,24 @@ public class GameServices extends CordovaPlugin implements
 
       if (ACTION_SIGNIN.equals(action)) {
         if (isGooglePlayServicesAvailable()) {
+          if (mGoogleApiClient == null) {
+            buildGoogleApliClient();
+          }
+
+          if (mGoogleApiClient.isConnected()) {
+            try {
+              JSONObject result = new JSONObject();
+              result.put("isSignedIn", response);
+              savedCallbackContext.success(result);
+              return;
+            } catch (JSONException e) {
+              Log.i(TAG, "isSignedIn: unable to determine if user is signed in or not", e);
+            }
+          }
+
           mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-              if (mGoogleApiClient == null) {
-                buildGoogleApliClient();
-              }
               signIn();
             }
           });
@@ -103,6 +115,10 @@ public class GameServices extends CordovaPlugin implements
 
       } else if (ACTION_SIGNOUT.equals(action)) {
         if (isGooglePlayServicesAvailable()) {
+          if (mGoogleApiClient == null) {
+            buildGoogleApliClient();
+          }
+
           Games.signOut(mGoogleApiClient).setResultCallback(
             new ResultCallback<Status>() {
               @Override
@@ -121,6 +137,10 @@ public class GameServices extends CordovaPlugin implements
         }
       } else if (ACTION_IS_SIGNEDIN.equals(action)) {
         if (isGooglePlayServicesAvailable()) {
+          if (mGoogleApiClient == null) {
+            buildGoogleApliClient();
+          }
+
           mActivity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -172,7 +192,7 @@ public class GameServices extends CordovaPlugin implements
 
     private void isSignedIn() {
       Log.i(TAG, "isSignedIn: execution");
-      boolean response = mGoogleApiClient != null && mGoogleApiClient.isConnected();
+      boolean response = (mGoogleApiClient != null && mGoogleApiClient.isConnected());
 
       try {
         JSONObject result = new JSONObject();
