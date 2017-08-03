@@ -6,8 +6,9 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Bundle;
-import android.util.Log;
 import android.R.id;
+import android.util.Log;
+import android.view.View;
 
 import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignInResult;
@@ -79,103 +80,76 @@ public class GameServices extends CordovaPlugin implements
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
       super.initialize(cordova, webView);
       mActivity = cordova.getActivity();
-      cordova.setActivityResultCallback(this);
     }
 
     @Override
     public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
-      savedCallbackContext = callbackContext;
-
       if (ACTION_SIGNIN.equals(action)) {
+        cordova.setActivityResultCallback(this);
+
         if (isGooglePlayServicesAvailable()) {
           if (mGoogleApiClient == null) {
             buildGoogleApliClient();
           }
 
           if (mGoogleApiClient.isConnected()) {
-            try {
-              JSONObject result = new JSONObject();
-              result.put("isSignedIn", response);
-              savedCallbackContext.success(result);
-              return;
-            } catch (JSONException e) {
-              Log.i(TAG, "isSignedIn: unable to determine if user is signed in or not", e);
-            }
+            callbackContext.success();
           }
 
-          mActivity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-              signIn();
-            }
-          });
+          signIn(callbackContext);
         } else {
           callbackContext.error("Google Play Services are unavailable.");
         }
 
+        return true;
       } else if (ACTION_SIGNOUT.equals(action)) {
         if (isGooglePlayServicesAvailable()) {
           if (mGoogleApiClient == null) {
             buildGoogleApliClient();
           }
 
-          Games.signOut(mGoogleApiClient).setResultCallback(
-            new ResultCallback<Status>() {
-              @Override
-              public void onResult(Status status) {
-                if (status.isSuccess()) {
-                  mGoogleApiClient.disconnect();
-                  signOut();
-                } else {
-                  savedCallbackContext.error(status.getStatusCode());
-                }
-              }
-            }
-          );
+          gameSignOut(callbackContext);
         } else {
           callbackContext.error("Google Play Services are unavailable.");
         }
+
+        return true;
       } else if (ACTION_IS_SIGNEDIN.equals(action)) {
         if (isGooglePlayServicesAvailable()) {
           if (mGoogleApiClient == null) {
             buildGoogleApliClient();
           }
 
-          mActivity.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-              isSignedIn();
-            }
-          });
+          isSignedIn(callbackContext);
         } else {
           callbackContext.error("Google Play Services are unavailable.");
         }
+
+        return true;
       } else if (ACTION_SUBMIT_SCORE.equals(action)) {
-
+        return true;
       } else if (ACTION_SUBMIT_SCORE_NOW.equals(action)) {
-
+        return true;
       } else if (ACTION_GET_PLAYER_SCORE.equals(action)) {
-
+        return true;
       } else if (ACTION_SHOW_ALL_LEADERBOARDS.equals(action)) {
-
+        return true;
       } else if (ACTION_UNLOCK_ACHIEVEMENT.equals(action)) {
-
+        return true;
       } else if (ACTION_UNLOCK_ACHIEVEMENT_NOW.equals(action)) {
-
+        return true;
       } else if (ACTION_INCREMENT_ACHIEVEMENT.equals(action)) {
-
+        return true;
       } else if (ACTION_INCREMENT_ACHIEVEMENT_NOW.equals(action)) {
-
+        return true;
       } else if (ACTION_SHOW_ACHIEVEMENTS.equals(action)) {
-
+        return true;
       } else if (ACTION_SHOW_PLAYER.equals(action)) {
-
+        return true;
       } else {
-          Log.i(TAG, "This action doesn't exist");
-          return false;
+        Log.i(TAG, "This action doesn't exist");
+        return false;
       }
-
-      return true;
     }
 
     @Override
@@ -188,20 +162,30 @@ public class GameServices extends CordovaPlugin implements
       Log.i(TAG, "succeedSignIn: signedIn");
       // mSignInFailureReason = null;
       mConnecting = false;
+      // Games.setViewForPopups(mGoogleApiClient, mActivity.setContentView(webView));
     }
 
-    private void isSignedIn() {
+    private void isSignedIn(final CallbackContext callbackContext) {
       Log.i(TAG, "isSignedIn: execution");
-      boolean response = (mGoogleApiClient != null && mGoogleApiClient.isConnected());
+      mActivity.runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          boolean response = (mGoogleApiClient != null && mGoogleApiClient.isConnected());
 
-      try {
-        JSONObject result = new JSONObject();
-        result.put("isSignedIn", response);
-        savedCallbackContext.success(result);
-      } catch (JSONException e) {
-        Log.i(TAG, "isSignedIn: unable to determine if user is signed in or not", e);
-        savedCallbackContext.error("isSignedIn: unable to determine if user is signed in or not");
-      }
+          if (response) {
+            callbackContext.success("SignedIn");
+          } else {
+            callbackContext.success("SignedOut");
+          }
+        }
+      });
+    }
+
+    @Override
+    public void onRestoreStateForActivityResult(Bundle state, CallbackContext callbackContext) {
+      super.onRestoreStateForActivityResult(state, callbackContext);
+      this.savedCallbackContext = callbackContext;
+      Log.i(TAG, "onRestoreStateForActivityResult: called");
     }
 
     @Override
@@ -212,7 +196,6 @@ public class GameServices extends CordovaPlugin implements
     @Override
     public void onConnectionFailed(ConnectionResult result) {
       Log.i(TAG, "Unresolvable failure in connecting to Google APIs");
-      // this.savedCallbackContext.error(result.getErrorCode());
       if (mResolvingConnectionFailure) {
         return;
       }
@@ -224,47 +207,37 @@ public class GameServices extends CordovaPlugin implements
       }
     }
 
-    private void signIn() {
-      Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
-      cordova.getActivity().startActivityForResult(signInIntent, RC_SIGN_IN);
+    private void signIn(final CallbackContext callbackContext) {
+      Log.i(TAG, "Sign In Method");
+      mActivity.runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
+          mActivity.startActivityForResult(signInIntent, RC_SIGN_IN);
+
+          PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
+          pluginResult.setKeepCallback(true);
+          savedCallbackContext = callbackContext;
+          callbackContext.sendPluginResult(pluginResult);
+        }
+      });
     }
 
-    // public SignInFailureReason getSignInError() {
-    //   return mSignInFailureReason;
-    // }
-
-    // public static class SignInFailureReason {
-    //   public static final int NO_ACTIVITY_RESULT_CODE = -100;
-    //   int mServiceErrorCode = 0;
-    //   int mActivityResultCode = NO_ACTIVITY_RESULT_CODE;
-    //
-    //   public int getServiceErrorCode() {
-    //     return mServiceErrorCode;
-    //   }
-    //
-    //   public int getActivityResultCode() {
-    //     return mActivityResultCode;
-    //   }
-    //
-    //   public SignInFailureReason(int serviceErrorCode, int activityResultCode) {
-    //     mServiceErrorCode = serviceErrorCode;
-    //     mActivityResultCode = activityResultCode;
-    //   }
-    //
-    //   public SignInFailureReason(int serviceErrorCode) {
-    //     this(serviceErrorCode, NO_ACTIVITY_RESULT_CODE);
-    //   }
-    //
-    //   @Override
-    //   public String toString() {
-    //     return "SignInFailureReason(serviceErrorCode:"
-    //             + GameHelperUtils.errorCodeToString(mServiceErrorCode)
-    //             + ((mActivityResultCode == NO_ACTIVITY_RESULT_CODE) ? ")"
-    //             : (",activityResultCode:"
-    //             + GameHelperUtils
-    //             .activityResponseCodeToString(mActivityResultCode) + ")"));
-    //   }
-    // }
+    private void gameSignOut(final CallbackContext callbackContext) {
+      Games.signOut(mGoogleApiClient).setResultCallback(
+        new ResultCallback<Status>() {
+          @Override
+          public void onResult(Status status) {
+            if (status.isSuccess()) {
+              mGoogleApiClient.disconnect();
+              callbackContext.success();
+            } else {
+              callbackContext.error(status.getStatusCode());
+            }
+          }
+        }
+      );
+    }
 
     @Override
   	public void onActivityResult(int requestCode, int responseCode, Intent intent) {
@@ -280,11 +253,12 @@ public class GameServices extends CordovaPlugin implements
         Log.i(TAG, "Sign in activity successful, calling handleSignInResult");
         mResolvingConnectionFailure = false;
         handleSignInResult(Auth.GoogleSignInApi.getSignInResultFromIntent(intent));
+      } else if (responseCode == Activity.RESULT_CANCELED) {
+        PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
+        savedCallbackContext.sendPluginResult(pluginResult);
+      } else {
+        savedCallbackContext.error(responseCode);
       }
-
-      // else {
-      //   BaseGameUtils.showActivityResultError(mActivity, requestCode, responseCode, errorMessageCode);
-      // }
   	}
 
     private void handleSignInResult(GoogleSignInResult signInResult) {
@@ -302,14 +276,7 @@ public class GameServices extends CordovaPlugin implements
 
       if (signInResult.isSuccess()) {
         connect();
-        try {
-          JSONObject result = new JSONObject();
-          result.put("isSignedIn", true);
-          savedCallbackContext.success(result);
-        } catch (JSONException e) {
-          Log.i(TAG, "handleSignInResult: unable to create json object properly, signIn was successful", e);
-          savedCallbackContext.success();
-        }
+        savedCallbackContext.success();
       } else {
         Log.i(TAG, "Wasn't signed in.");
         savedCallbackContext.error(signInResult.getStatus().getStatusCode());
@@ -326,37 +293,6 @@ public class GameServices extends CordovaPlugin implements
       mGoogleApiClient.connect(GoogleApiClient.SIGN_IN_MODE_OPTIONAL);
     }
 
-    private void signOut() {
-      if (mGoogleApiClient == null) {
-        savedCallbackContext.error("Please use login before logging out.");
-        return;
-      }
-
-      ConnectionResult apiConnect = mGoogleApiClient.blockingConnect();
-
-      if (apiConnect.isSuccess()) {
-        Auth.GoogleSignInApi.signOut(mGoogleApiClient).setResultCallback(
-          new ResultCallback<Status>() {
-            @Override
-            public void onResult(Status status) {
-              if (status.isSuccess()) {
-                try {
-                  JSONObject result = new JSONObject();
-                  result.put("isSignedIn", false);
-                  savedCallbackContext.success(result);
-                } catch (JSONException e) {
-                  Log.i(TAG, "signOut: unable to create json object properly, signout was successful", e);
-                  savedCallbackContext.success();
-                }
-              } else {
-                savedCallbackContext.error(status.getStatusCode());
-              }
-            }
-          }
-        );
-      }
-    }
-
     private void revokeAccess() {
       if (mGoogleApiClient == null) {
         savedCallbackContext.error("Please use login before disconnecting");
@@ -371,7 +307,7 @@ public class GameServices extends CordovaPlugin implements
             @Override
             public void onResult(Status status) {
               if (status.isSuccess()) {
-                savedCallbackContext.success("Revoked user access.");
+                savedCallbackContext.success();
               } else {
                 savedCallbackContext.error(status.getStatusCode());
               }
