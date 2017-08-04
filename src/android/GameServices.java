@@ -14,17 +14,17 @@ import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignInResult;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
-import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.AccountPicker;
-import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.common.api.Scope;
-import com.google.android.gms.games.achievement.Achievements;
-import com.google.android.gms.games.leaderboard.Leaderboards;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.games.achievement.*;
+import com.google.android.gms.games.leaderboard.*;
 import com.google.android.gms.games.GamesStatusCodes;
-import com.google.android.gms.games.leaderboard.LeaderboardScore;
 import com.google.android.gms.games.Player;
 import com.google.android.gms.games.Games;
 import com.google.android.gms.games.Games.GamesOptions;
@@ -84,6 +84,8 @@ public class GameServices extends CordovaPlugin implements
 
     @Override
     public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
+      JSONObject options = args.optJSONObject(0);
+
       if (ACTION_SIGNIN.equals(action)) {
         cordova.setActivityResultCallback(this);
 
@@ -127,8 +129,10 @@ public class GameServices extends CordovaPlugin implements
 
         return true;
       } else if (ACTION_SUBMIT_SCORE.equals(action)) {
+        submitScore(options, callbackContext);
         return true;
       } else if (ACTION_SUBMIT_SCORE_NOW.equals(action)) {
+        submitScoreNow(options, callbackContext);
         return true;
       } else if (ACTION_GET_PLAYER_SCORE.equals(action)) {
         return true;
@@ -240,8 +244,8 @@ public class GameServices extends CordovaPlugin implements
     }
 
     @Override
-  	public void onActivityResult(int requestCode, int responseCode, Intent intent) {
-  		super.onActivityResult(requestCode, responseCode, intent);
+    public void onActivityResult(int requestCode, int responseCode, Intent intent) {
+      super.onActivityResult(requestCode, responseCode, intent);
       Log.i(TAG, "In onActivityResult");
 
       if (requestCode != RC_SIGN_IN) {
@@ -259,7 +263,7 @@ public class GameServices extends CordovaPlugin implements
       } else {
         savedCallbackContext.error(responseCode);
       }
-  	}
+    }
 
     private void handleSignInResult(GoogleSignInResult signInResult) {
       if (mGoogleApiClient == null) {
@@ -281,6 +285,77 @@ public class GameServices extends CordovaPlugin implements
         Log.i(TAG, "Wasn't signed in.");
         savedCallbackContext.error(signInResult.getStatus().getStatusCode());
       }
+    }
+
+    private void submitScore(final JSONObject options, final CallbackContext callbackContext) throws JSONException {
+      Log.i(TAG, "submitScore");
+
+      final boolean connected = mGoogleApiClient != null && mGoogleApiClient.isConnected();
+      mActivity.runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            if (connected) {
+              Games.Leaderboards.submitScore(mGoogleApiClient, options.getString("leaderboardId"), options.getInt("score"));
+              callbackContext.success();
+            } else {
+              callbackContext.error("submitScore: not yet signed in.");
+            }
+          } catch (JSONException e) {
+            Log.w(TAG, "submitScore: unexpected error", e);
+            callbackContext.error("submitScore: error while submitting score.");
+          }
+        }
+      });
+    }
+
+    private void submitScoreNow(final JSONObject options, final CallbackContext callbackContext) throws JSONException {
+      Log.i(TAG, "submitScoreNow");
+
+      final boolean connected = mGoogleApiClient != null && mGoogleApiClient.isConnected();
+      mActivity.runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            if (connected) {
+              PendingResult<Leaderboards.SubmitScoreResult> result = Games.Leaderboards.submitScoreImmediate(mGoogleApiClient, options.getString("leaderboardId"), options.getInt("score"));
+              result.setResultCallback(new ResultCallback<Leaderboards.SubmitScoreResult>() {
+                @Override
+                public void onResult(Leaderboards.SubmitScoreResult submitScoreResult) {
+                  if (submitScoreResult.getStatus().isSuccess()) {
+                    ScoreSubmissionData scoreSubmissionData = submitScoreResult.getScoreData();
+                    if (scoreSubmissionData != null) {
+                      try {
+                        ScoreSubmissionData.Result scoreResult = scoreSubmissionData.getScoreResult(LeaderboardVariant.TIME_SPAN_ALL_TIME);
+                        JSONObject result = new JSONObject();
+                        result.put("leaderboardId", scoreSubmissionData.getLeaderboardId());
+                        result.put("playerId", scoreSubmissionData.getPlayerId());
+                        result.put("formattedScore", scoreResult.formattedScore);
+                        result.put("newBest", scoreResult.newBest);
+                        result.put("rawScore", scoreResult.rawScore);
+                        result.put("scoreTag", scoreResult.scoreTag);
+                        callbackContext.success(result);
+                      } catch (JSONException e) {
+                        Log.w(TAG, "submitScoreNow: unexpected error", e);
+                        callbackContext.error("submitScoreNow: error while submitting score");
+                      }
+                    } else {
+                      callbackContext.error("submitScoreNow: can't submit the score");
+                    }
+                  } else {
+                    callbackContext.error("submitScoreNow error: " + submitScoreResult.getStatus().getStatusMessage());
+                  }
+                }
+              });
+            } else {
+              callbackContext.error("submitScoreNow: not yet signed in");
+            }
+          } catch (JSONException e) {
+            Log.i(TAG, "submitScoreNow: unexpected error", e);
+            callbackContext.error("submitScoreNow: error while submitting score");
+          }
+        }
+      });
     }
 
     private void connect() {

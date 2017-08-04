@@ -12,6 +12,14 @@ GameServices.prototype.signOut = function(success, error) {
   cordova.exec(success, error, "GameServices", "signOut", []);
 }
 
+GameServices.prototype.submitScore = function(options, success, error) {
+  cordova.exec(success, error, "GameServices", "submitScore", [options]);
+}
+
+GameServices.prototype.submitScoreNow = function(options, success, error) {
+  cordova.exec(success, error, "GameServices", "submitScoreNow", [options]);
+}
+
 GameServices.install = function () {
   if (!window.plugins) {
     window.plugins = {};
