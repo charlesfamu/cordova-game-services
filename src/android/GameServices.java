@@ -53,18 +53,13 @@ public class GameServices extends CordovaPlugin implements
     private static final String ACTION_SUBMIT_SCORE = "submitScore";
     private static final String ACTION_SUBMIT_SCORE_NOW = "submitScoreNow";
     private static final String ACTION_GET_PLAYER_SCORE = "getPlayerScore";
-    private static final String ACTION_SHOW_ALL_LEADERBOARDS = "showAllLeaderboards";
-    private static final String ACTION_SHOW_LEADERBOARD = "showLeaderboard";
+    private static final String ACTION_LOAD_TOP_SCORES = "getTopScores";
 
-    private static final String ACTION_UNLOCK_ACHIEVEMENT = "unlockAchievement";
-    private static final String ACTION_UNLOCK_ACHIEVEMENT_NOW = "unlockAchievementNow";
-    private static final String ACTION_INCREMENT_ACHIEVEMENT = "incrementAchievement";
-    private static final String ACTION_INCREMENT_ACHIEVEMENT_NOW = "incrementAchievementNow";
-    private static final String ACTION_SHOW_ACHIEVEMENTS = "showAchievements";
-    private static final String ACTION_SHOW_PLAYER = "showPlayer";
     private static final int RC_SIGN_IN = 9001;
     private static final int RC_GAMESERVICES = 4195819;
     private static final int errorMessageCode = 12500;
+    private static final int maxResults = 25;
+
     private boolean mResolvingConnectionFailure = false;
     private boolean mAutoStartSignInflow = true;
     private boolean mConnecting = false;
@@ -135,20 +130,10 @@ public class GameServices extends CordovaPlugin implements
         submitScoreNow(options, callbackContext);
         return true;
       } else if (ACTION_GET_PLAYER_SCORE.equals(action)) {
+        getPlayerScore(options, callbackContext);
         return true;
-      } else if (ACTION_SHOW_ALL_LEADERBOARDS.equals(action)) {
-        return true;
-      } else if (ACTION_UNLOCK_ACHIEVEMENT.equals(action)) {
-        return true;
-      } else if (ACTION_UNLOCK_ACHIEVEMENT_NOW.equals(action)) {
-        return true;
-      } else if (ACTION_INCREMENT_ACHIEVEMENT.equals(action)) {
-        return true;
-      } else if (ACTION_INCREMENT_ACHIEVEMENT_NOW.equals(action)) {
-        return true;
-      } else if (ACTION_SHOW_ACHIEVEMENTS.equals(action)) {
-        return true;
-      } else if (ACTION_SHOW_PLAYER.equals(action)) {
+      } else if (ACTION_LOAD_TOP_SCORES.equals(action)) {
+        getTopScores(options, callbackContext);
         return true;
       } else {
         Log.i(TAG, "This action doesn't exist");
@@ -170,7 +155,7 @@ public class GameServices extends CordovaPlugin implements
     }
 
     private void isSignedIn(final CallbackContext callbackContext) {
-      Log.i(TAG, "isSignedIn: execution");
+      Log.i(TAG, "In isSignedIn method");
       mActivity.runOnUiThread(new Runnable() {
         @Override
         public void run() {
@@ -212,7 +197,7 @@ public class GameServices extends CordovaPlugin implements
     }
 
     private void signIn(final CallbackContext callbackContext) {
-      Log.i(TAG, "Sign In Method");
+      Log.i(TAG, "In signIn Method");
       mActivity.runOnUiThread(new Runnable() {
         @Override
         public void run() {
@@ -246,7 +231,7 @@ public class GameServices extends CordovaPlugin implements
     @Override
     public void onActivityResult(int requestCode, int responseCode, Intent intent) {
       super.onActivityResult(requestCode, responseCode, intent);
-      Log.i(TAG, "In onActivityResult");
+      Log.i(TAG, "Is in onActivityResult method");
 
       if (requestCode != RC_SIGN_IN) {
         Log.i(TAG, "One of our activities finished up, but isn't the sign in activity.");
@@ -353,6 +338,96 @@ public class GameServices extends CordovaPlugin implements
           } catch (JSONException e) {
             Log.i(TAG, "submitScoreNow: unexpected error", e);
             callbackContext.error("submitScoreNow: error while submitting score");
+          }
+        }
+      });
+    }
+
+    private void getPlayerScore(final JSONObject options, final CallbackContext callbackContext) throws JSONException {
+      Log.i(TAG, "In getPlayerScore method");
+
+      final boolean connected = mGoogleApiClient != null && mGoogleApiClient.isConnected();
+
+      cordova.getActivity().runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            if (isConnected) {
+              PendingResult<Leaderboards.LoadPlayerScoreResult> result = Games.Leaderboards.loadCurrentPlayerLeaderboardScore(mGoogleApiClient, options.getString("leaderboardId"), LeaderboardVariant.TIME_SPAN_ALL_TIME, LeaderboardVariant.COLLECTION_PUBLIC);
+              result.setResultCallback(new ResultCallback<Leaderboards.LoadPlayerScoreResult>() {
+                @Override
+                public void onResult(Leaderboards.LoadPlayerScoreResult playerScoreResult) {
+                  if (playerScoreResult.getStatus().isSuccess()) {
+                    LeaderboardScore score = playerScoreResult.getScore();
+                    if (score != null) {
+                      try {
+                        JSONObject result = new JSONObject();
+                        result.put("playerScore", score.getRawScore());
+                        callbackContext.success(result);
+                      } catch (JSONException e) {
+                        Log.w(TAG, "getPlayerScore: unexpected error", e);
+                        callbackContext.error("getPlayerScore: error while retrieving score");
+                      }
+                    } else {
+                      callbackContext.error("There isn't have any score record for this player");
+                    }
+                  } else {
+                    callbackContext.error("getPlayerScore error: " + playerScoreResult.getStatus().getStatusMessage());
+                  }
+                }
+              });
+            } else {
+              callbackContext.error("getPlayerScore: not yet signed in");
+            }
+          } catch (JSONException e) {
+            Log.i(TAG, "getPlayerScore: unexpected error", e);
+            callbackContext.error("getPlayerScore: error while retrieving score");
+          }
+        }
+      });
+    }
+
+    private void getTopScores(final JSONObject options, final CallbackContext callbackContext) throws JSONException {
+      Log.i(TAG, "In getTopScores method");
+
+      final boolean connected = mGoogleApiClient != null && mGoogleApiClient.isConnected();
+
+      cordova.getActivity().runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            if (isConnected) {
+              PendingResult<Leaderboards.LoadScoresResult> result = Games.Leaderboards.loadTopScores(mGoogleApiClient, options.getString("leaderboardId"), LeaderboardVariant.TIME_SPAN_ALL_TIME, LeaderboardVariant.COLLECTION_PUBLIC, maxResults);
+              result.setResultCallback(new ResultCallback<Leaderboards.LoadScoresResult>() {
+                @Override
+                public void onResult(Leaderboards.LoadScoresResult topScoresResult) {
+                  if (topScoresResult.getStatus().isSuccess()) {
+                    // Leaderboard leaderboard = topScoresResult.getLeaderboard();
+                    LeaderboardScoreBuffer topScoresBuffer = topScoresResult.getScores();
+                    final int size = topScoresResult.getScores().getCount();
+                    if (topScores != null) {
+                      try {
+                        JSONObject result = new JSONObject();
+                        result.put("playerScore", score.getRawScore());
+                        callbackContext.success(result);
+                      } catch (JSONException e) {
+                        Log.i(TAG, "getTopScores: unexpected error", e);
+                        callbackContext.error("getTopScores: error while retrieving score");
+                      }
+                    } else {
+                      callbackContext.error("There isn't have any score record for this player");
+                    }
+                  } else {
+                    callbackContext.error("getTopScores error: " + scoreResult.getStatus().getStatusMessage());
+                  }
+                }
+              });
+            } else {
+              callbackContext.error("scoreResult: not yet signed in");
+            }
+          } catch (JSONException e) {
+            Log.i(TAG, "scoreResult: unexpected error", e);
+            callbackContext.error("scoreResult: error while retrieving score");
           }
         }
       });
