@@ -20,6 +20,14 @@ GameServices.prototype.submitScoreNow = function(options, success, error) {
   cordova.exec(success, error, "GameServices", "submitScoreNow", [options]);
 }
 
+GameServices.prototype.getPlayerScore = function(options, success, error) {
+  cordova.exec(success, error, "GameServices", "getPlayerScore", [options]);
+}
+
+GameServices.prototype.getTopScores = function(options, success, error) {
+  cordova.exec(success, error, "GameServices", "getTopScores", [options]);
+}
+
 GameServices.install = function () {
   if (!window.plugins) {
     window.plugins = {};
