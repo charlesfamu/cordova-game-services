@@ -21,6 +21,7 @@ import com.google.android.gms.games.Games;
 
 import org.apache.cordova.*;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.IOException;
@@ -392,21 +393,19 @@ public class GameServices extends CordovaPlugin implements
                 public void onResult(Leaderboards.LoadScoresResult topScoresResult) {
                   if (topScoresResult != null && topScoresResult.getStatus().isSuccess()) {
                     try {
-                      StringBuilder jsonString = new StringBuilder();
+                      JSONArray result = new JSONArray();
                       LeaderboardScoreBuffer topScoresBuffer = topScoresResult.getScores();
                       final int size = topScoresResult.getScores().getCount();
                       if (size > 0) {
-                        Iterator<LeaderboardScore> it = topScoresBuffer.iterator();
-                        jsonString.append("{");
-
-                        while (it.hasNext()) {
-                          LeaderboardScore temp = it.next();
-                          Log.i(TAG, "player " + temp.getScoreHolderDisplayName() + " id: " + temp.getRawScore() + " rank: " + temp.getRank());
-                          jsonString.append("name:" + temp.getScoreHolderDisplayName() + ", score: " + temp.getRawScore() + ", rank: " + temp.getRank());
+                        for(int i = 0; i < size; i++) {
+                          LeaderboardScore score = topScoresBuffer.get(i);
+                          JSONObject obj = new JSONObject();
+                          Log.i(TAG, "player " + score.getScoreHolderDisplayName() + " id: " + score.getRawScore() + " rank: " + score.getRank());
+                          obj.put("name", score.getScoreHolderDisplayName());
+                          obj.put("score", score.getRawScore());
+                          obj.put("rank", score.getRank());
+                          result.put(obj);
                         }
-
-                        jsonString.append("}");
-                        JSONObject result = new JSONObject(jsonString.toString());
                         callbackContext.success(result);
                       } else {
                         callbackContext.error("There isn't any leaderboard data");
