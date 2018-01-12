@@ -24,9 +24,6 @@ import org.json.JSONObject;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-import java.io.IOException;
-import java.util.Iterator;
-
 /**
  * This class echoes a string called from JavaScript.
  */
@@ -276,9 +273,9 @@ public class GameServices extends CordovaPlugin implements
             } else {
               callbackContext.error("submitScore: not yet signed in.");
             }
-          } catch (JSONException e) {
+          } catch (Exception e) {
             Log.w(TAG, "submitScore: unexpected error", e);
-            callbackContext.error("submitScore: error while submitting score.");
+            callbackContext.error("submitScore: error using improper function parameters.");
           }
         }
       });
@@ -325,9 +322,9 @@ public class GameServices extends CordovaPlugin implements
             } else {
               callbackContext.error("submitScoreNow: not yet signed in");
             }
-          } catch (JSONException e) {
+          } catch (Exception e) {
             Log.i(TAG, "submitScoreNow: unexpected error", e);
-            callbackContext.error("submitScoreNow: error while submitting score");
+            callbackContext.error("submitScoreNow: error using improper function parameters.");
           }
         }
       });
@@ -348,10 +345,10 @@ public class GameServices extends CordovaPlugin implements
                 @Override
                 public void onResult(Leaderboards.LoadPlayerScoreResult playerScoreResult) {
                   if (playerScoreResult.getStatus().isSuccess()) {
+                    JSONObject result = new JSONObject();
                     LeaderboardScore score = playerScoreResult.getScore();
                     if (score != null) {
                       try {
-                        JSONObject result = new JSONObject();
                         result.put("playerScore", score.getRawScore());
                         callbackContext.success(result);
                       } catch (JSONException e) {
@@ -359,7 +356,13 @@ public class GameServices extends CordovaPlugin implements
                         callbackContext.error("getPlayerScore: error while retrieving score");
                       }
                     } else {
-                      callbackContext.error("There isn't any score record for this player");
+                      try {
+                        result.put("playerScore", null);
+                        callbackContext.success(result);
+                      } catch (JSONException e) {
+                        Log.w(TAG, "getPlayerScore: unexpected error", e);
+                        callbackContext.error("getPlayerScore: unable to set score to null");
+                      }
                     }
                   } else {
                     callbackContext.error("getPlayerScore error: " + playerScoreResult.getStatus().getStatusMessage());
@@ -369,9 +372,9 @@ public class GameServices extends CordovaPlugin implements
             } else {
               callbackContext.error("getPlayerScore: not yet signed in");
             }
-          } catch (JSONException e) {
+          } catch (Exception e) {
             Log.i(TAG, "getPlayerScore: unexpected error", e);
-            callbackContext.error("getPlayerScore: error while retrieving score");
+            callbackContext.error("getPlayerScore: error using improper function parameters.");
           }
         }
       });
@@ -406,10 +409,8 @@ public class GameServices extends CordovaPlugin implements
                           obj.put("rank", score.getRank());
                           result.put(obj);
                         }
-                        callbackContext.success(result);
-                      } else {
-                        callbackContext.error("There isn't any leaderboard data");
                       }
+                      callbackContext.success(result);
                     } catch (Exception e) {
                       Log.i(TAG, "getTopScores: unexpected error", e);
                       callbackContext.error("getTopScores: error while retrieving score");
@@ -422,9 +423,9 @@ public class GameServices extends CordovaPlugin implements
             } else {
               callbackContext.error("getTopScores: not yet signed in");
             }
-          } catch (JSONException e) {
+          } catch (Exception e) {
             Log.i(TAG, "getTopScores: unexpected error", e);
-            callbackContext.error("getTopScores: error while retrieving score");
+            callbackContext.error("getTopScores: error using improper function parameters.");
           }
         }
       });
