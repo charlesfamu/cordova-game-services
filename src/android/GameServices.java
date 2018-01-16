@@ -46,6 +46,7 @@ public class GameServices extends CordovaPlugin implements
     private static final int RC_GAMESERVICES = 4195819;
     private static final int errorMessageCode = 12500;
     private static final int maxResults = 25;
+    private static final int ACTIVITY_CODE_SHOW_LEADERBOARD = 0;
 
     private boolean mResolvingConnectionFailure = false;
     private boolean mAutoStartSignInflow = true;
@@ -390,37 +391,11 @@ public class GameServices extends CordovaPlugin implements
         public void run() {
           try {
             if (connected) {
-              PendingResult<Leaderboards.LoadScoresResult> result = Games.Leaderboards.loadTopScores(mGoogleApiClient, options.getString("leaderboardId"), LeaderboardVariant.TIME_SPAN_ALL_TIME, LeaderboardVariant.COLLECTION_PUBLIC, maxResults);
-              result.setResultCallback(new ResultCallback<Leaderboards.LoadScoresResult>() {
-                @Override
-                public void onResult(Leaderboards.LoadScoresResult topScoresResult) {
-                  if (topScoresResult != null && topScoresResult.getStatus().isSuccess()) {
-                    try {
-                      JSONArray result = new JSONArray();
-                      LeaderboardScoreBuffer topScoresBuffer = topScoresResult.getScores();
-                      final int size = topScoresResult.getScores().getCount();
-                      if (size > 0) {
-                        for(int i = 0; i < size; i++) {
-                          LeaderboardScore score = topScoresBuffer.get(i);
-                          JSONObject obj = new JSONObject();
-                          Log.i(TAG, "player " + score.getScoreHolderDisplayName() + " id: " + score.getRawScore() + " rank: " + score.getRank());
-                          obj.put("name", score.getScoreHolderDisplayName());
-                          obj.put("score", score.getRawScore());
-                          obj.put("rank", score.getRank());
-                          result.put(obj);
-                        }
-                      }
-                      callbackContext.success(result);
-                    } catch (Exception e) {
-                      Log.i(TAG, "getTopScores: unexpected error", e);
-                      callbackContext.error("getTopScores: error while retrieving score");
-                    }
-                  } else {
-                    callbackContext.error("getTopScores error: " + topScoresResult.getStatus().getStatusMessage());
-                  }
-                }
-              });
+              Intent leaderboardIntent = Games.Leaderboards.getLeaderboardIntent(mGoogleApiClient, options.getString("leaderboardId"));
+              mActivity.startActivityForResult(leaderboardIntent, ACTIVITY_CODE_SHOW_LEADERBOARD);
+              callbackContext.success();
             } else {
+              Log.w(TAG, "getTopScores: not yet signed in");
               callbackContext.error("getTopScores: not yet signed in");
             }
           } catch (Exception e) {
