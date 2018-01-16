@@ -351,6 +351,7 @@ public class GameServices extends CordovaPlugin implements
                     if (score != null) {
                       try {
                         result.put("playerScore", score.getRawScore());
+                        Log.i(TAG, "getPlayerScore: captured score correctly");
                         callbackContext.success(result);
                       } catch (JSONException e) {
                         Log.w(TAG, "getPlayerScore: unexpected error", e);
@@ -359,6 +360,7 @@ public class GameServices extends CordovaPlugin implements
                     } else {
                       try {
                         result.put("playerScore", null);
+                        Log.i(TAG, "getPlayerScore: empty score");
                         callbackContext.success(result);
                       } catch (JSONException e) {
                         Log.w(TAG, "getPlayerScore: unexpected error", e);
