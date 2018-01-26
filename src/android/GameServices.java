@@ -359,7 +359,7 @@ public class GameServices extends CordovaPlugin implements
                       }
                     } else {
                       try {
-                        result.put("playerScore", null);
+                        result.put("playerScore", JSONObject.NULL);
                         Log.i(TAG, "getPlayerScore: empty score");
                         callbackContext.success(result);
                       } catch (JSONException e) {

@@ -49,13 +49,4 @@
     <source-file src="src/android/BaseGameUtils.java" target-dir="src/com/littlemathgenius/cordova/plugins/gameservices"/>
     <source-file src="src/android/GameServices.java" target-dir="src/com/littlemathgenius/cordova/plugins/gameservices" />
   </platform>
-
-  <platform name="ios">
-    <config-file parent="/*" target="config.xml">
-      <feature name="GameServices">
-        <param name="ios-package" value="GameServices" />
-      </feature>
-    </config-file>
-    <source-file src="src/ios/GameServices.m" />
-  </platform>
 </plugin>
