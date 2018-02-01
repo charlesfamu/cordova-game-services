@@ -167,20 +167,25 @@ public class GameServices extends CordovaPlugin implements
 
     @Override
     public void onConnectionSuspended(int cause) {
-      mGoogleApiClient.connect();
+      Log.i(TAG, "onConnectionSuspended, cause=" + cause);
+      // mGoogleApiClient.disconnect();
     }
 
     @Override
     public void onConnectionFailed(ConnectionResult result) {
       Log.i(TAG, "Unresolvable failure in connecting to Google APIs");
-      if (mResolvingConnectionFailure) {
-        return;
-      }
+      // if (mResolvingConnectionFailure) {
+      //   return;
+      // }
+      //
+      // mResolvingConnectionFailure = true;
+      //
+      // if (!BaseGameUtils.resolveConnectionFailure(mActivity, mGoogleApiClient, result, RC_SIGN_IN, errorMessageCode)) {
+      //   mResolvingConnectionFailure = false;
+      // }
 
-      mResolvingConnectionFailure = true;
-
-      if (!BaseGameUtils.resolveConnectionFailure(mActivity, mGoogleApiClient, result, RC_SIGN_IN, errorMessageCode)) {
-        mResolvingConnectionFailure = false;
+      if (mGoogleApiClient != null) {
+        mGoogleApiClient.disconnect();
       }
     }
 
