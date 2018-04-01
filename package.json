@@ -1,0 +1,35 @@
+{
+  "name": "cordova-plugin-game-services",
+  "version": "1.0.0",
+  "description": "Google Play Games Services Cordova Plugin for Android",
+  "cordova": {
+    "id": "cordova-plugin-game-services",
+    "platforms": [
+      "android"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/charlesfamu/cordova-game-services.git"
+  },
+  "bugs": {
+    "url": "https://github.com/charlesfamu/cordova-game-services/issues"
+  },
+  "keywords": [
+    "ecosystem:cordova",
+    "cordova-android",
+    "cordova",
+    "google",
+    "play",
+    "games",
+    "services",
+    "android",
+    "users",
+    "leaderboard"
+  ],
+  "author": {
+    "name": "Charles Bunton",
+    "email": "charles.bunton@buntonco.com"
+  },
+  "license": "MIT"
+}
