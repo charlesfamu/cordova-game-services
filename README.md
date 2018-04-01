@@ -71,7 +71,7 @@ Ensure you have had a successful callback from `window.plugins.gameservices.sign
 This method submit the score immediately.
 
 ```
-window.plugins.playGamesServices.submitScoreNow({ score, leaderboardId });
+window.plugins.gameservices.submitScoreNow({ score, leaderboardId });
 ```
 
 #### Show specific leaderboard
