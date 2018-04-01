@@ -7,14 +7,6 @@ Includes the new Google Play Services (GoogleApiAvailability) and methods for Le
 
 ## Install
 
-Cordova >= 5.0.0
-
-```
-cordova plugin add cordova-plugin-game-services --variable APP_ID=you_app_id_here
-```
-
-Cordova < 5.0.0
-
 ```
 cordova plugin add https://github.com/charlesfamu/cordova-game-services.git --variable APP_ID=you_app_id_here
 ```
@@ -69,10 +61,6 @@ window.plugins.gamesservices.getPlayerScore( { leaderboardId } );
 Ensure you have had a successful callback from `window.plugins.gameservices.signIn()` first before attempting to submit a score. You should also have set up your leaderboard(s) in Google Play Game Console and use the leaderboard identifier assigned there as the `leaderboardId`.
 
 ```
-var data = {
-    score: 10,
-    leaderboardId: "board1"
-};
 window.plugins.gameservices.submitScore( { score, leaderboardId });
 ```
 
@@ -83,10 +71,6 @@ Ensure you have had a successful callback from `window.plugins.gameservices.sign
 This method submit the score immediately.
 
 ```
-var data = {
-    score: 10,
-    leaderboardId: "board1"
-};
 window.plugins.playGamesServices.submitScoreNow({ score, leaderboardId });
 ```
 
@@ -95,9 +79,6 @@ window.plugins.playGamesServices.submitScoreNow({ score, leaderboardId });
 Launches directly into the specified leaderboard:
 
 ```
-var data = {
-	leaderboardId: "board1"
-};
 window.plugins.gameservices.getTopScores( { leaderboardId });
 ```
 
