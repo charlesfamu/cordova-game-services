@@ -19,7 +19,7 @@ cordova plugin add https://github.com/charlesfamu/cordova-game-services.git --va
 You should do this as soon as your `deviceready` event has been fired. The plugin handles the various auth scenarios for you.
 
 ```
-window.plugins.gameservices.signIn((response) => {
+cordova.plugins.gameservices.signIn((response) => {
     //response
   });
 ```
@@ -28,7 +28,7 @@ window.plugins.gameservices.signIn((response) => {
 You should provide the option for users to sign out
 
 ```
-window.plugins.gameservices.signOut((response: string) => {
+cordova.plugins.gameservices.signOut((response: string) => {
     if (response == 'OK') {
       //signOut successful
     }
@@ -39,7 +39,7 @@ window.plugins.gameservices.signOut((response: string) => {
 To check if the user is already logged in (eg. to determine weather to show the Log In or Log Out button), use the following
 
 ```
-window.plugins.gamesservices.isSignedIn((response: string) => {
+cordova.plugins.gamesservices.isSignedIn((response: string) => {
 	if (response === 'SignedIn') {
     //signIn successful
   }
@@ -50,7 +50,7 @@ window.plugins.gamesservices.isSignedIn((response: string) => {
 Get player score information for a given leaderboard.
 
 ```
-window.plugins.gamesservices.getPlayerScore( { leaderboardId } );
+cordova.plugins.gamesservices.getPlayerScore( { leaderboardId } );
 ```
 
 
@@ -61,7 +61,7 @@ window.plugins.gamesservices.getPlayerScore( { leaderboardId } );
 Ensure you have had a successful callback from `window.plugins.gameservices.signIn()` first before attempting to submit a score. You should also have set up your leaderboard(s) in Google Play Game Console and use the leaderboard identifier assigned there as the `leaderboardId`.
 
 ```
-window.plugins.gameservices.submitScore( { score, leaderboardId });
+cordova.plugins.gameservices.submitScore( { score, leaderboardId });
 ```
 
 #### Sumit Score Now
@@ -71,7 +71,7 @@ Ensure you have had a successful callback from `window.plugins.gameservices.sign
 This method submit the score immediately.
 
 ```
-window.plugins.gameservices.submitScoreNow({ score, leaderboardId });
+cordova.plugins.gameservices.submitScoreNow({ score, leaderboardId });
 ```
 
 #### Show specific leaderboard
@@ -79,7 +79,7 @@ window.plugins.gameservices.submitScoreNow({ score, leaderboardId });
 Launches directly into the specified leaderboard:
 
 ```
-window.plugins.gameservices.getTopScores( { leaderboardId });
+cordova.plugins.gameservices.getTopScores( { leaderboardId });
 ```
 
 ## Platform
